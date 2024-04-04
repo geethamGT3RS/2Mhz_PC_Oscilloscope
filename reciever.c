@@ -1,3 +1,13 @@
+//////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+Copyright 2021 Google LLC
+Use of this source code is governed by an MIT-style
+license that can be found in the LICENSE file or at
+https://opensource.org/licenses/MIT.
+*/
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 #include <wiringPi.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -16,6 +26,11 @@
 volatile sig_atomic_t timer_expired = 0;
 
 float t_sleep=100000;
+
+    //  ADDED BY Geetham.GT3RS  //
+    //     SET DELAY HERE       //
+
+float TIME = 1;
 
 void timer_handler(int signum) {
     timer_expired = 1;
@@ -80,9 +95,9 @@ int main(void)
     {
         digitalWrite(CS, LOW);
         digitalWrite(SCLK, HIGH); 
-        delayMicroseconds(1);
+        delayMicroseconds(TIME);
         digitalWrite(SCLK, LOW);
-        delayMicroseconds(1);
+        delayMicroseconds(TIME);
     }
     
     //  ADDED BY Geetham.GT3RS  //
@@ -95,11 +110,11 @@ int main(void)
         for (int i = 0; i < 14; i++) 
         {
             digitalWrite(SCLK, HIGH); 
-            delayMicroseconds(1);
+            delayMicroseconds(TIME);
             
             
             digitalWrite(SCLK, LOW);
-            delayMicroseconds(1);
+            delayMicroseconds(TIME);
             if (i > 2) 
             {
                 data = data << 1;
@@ -112,7 +127,7 @@ int main(void)
         }
         digitalWrite(CS, HIGH);
         write(pipe_fd, &data, sizeof(uint16_t));
-        delayMicroseconds(1);
+        delayMicroseconds(TIME);
     }
 
     close(pipe_fd);
