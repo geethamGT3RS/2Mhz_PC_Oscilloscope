@@ -1,2 +1,2 @@
-#Raspberry Pi Oscilloscope
+# Raspberry Pi Oscilloscope
 Doesn't contain complete code, ADC driver is not provided.
