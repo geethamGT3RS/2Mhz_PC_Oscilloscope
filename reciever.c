@@ -23,14 +23,15 @@ https://opensource.org/licenses/MIT.
 #define SDATA 2
 #define CS 3
 
+    //  ADDED BY Geetham.GT3RS  //
+    //     SET DELAY HERE       //
+
+#define TIME 1.0
+
 volatile sig_atomic_t timer_expired = 0;
 
 float t_sleep=100000;
 
-    //  ADDED BY Geetham.GT3RS  //
-    //     SET DELAY HERE       //
-
-float TIME = 1;
 
 void timer_handler(int signum) {
     timer_expired = 1;
@@ -103,35 +104,26 @@ int main(void)
     //  ADDED BY Geetham.GT3RS  //
     //    START READING DATA    //
     
+    uint16_t data = 0;
+    
     while (1)
     {
         digitalWrite(CS, LOW);
-        uint16_t data = 0;
+        data = 0;
         for (int i = 0; i < 14; i++) 
         {
             digitalWrite(SCLK, HIGH); 
             delayMicroseconds(TIME);
-            
-            
             digitalWrite(SCLK, LOW);
+            data = data << 1;
+            data = data | digitalRead(SDATA);
             delayMicroseconds(TIME);
-            if (i > 2) 
-            {
-                data = data << 1;
-                data = data | digitalRead(SDATA);
-            } 
-            else 
-            {
-                continue;
-            }
         }
         digitalWrite(CS, HIGH);
         write(pipe_fd, &data, sizeof(uint16_t));
         delayMicroseconds(TIME);
     }
-
     close(pipe_fd);
-
     return 0;
 }
 

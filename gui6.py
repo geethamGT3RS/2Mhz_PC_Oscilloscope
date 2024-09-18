@@ -17,7 +17,7 @@ class DataReceiver(QRunnable):
         self.expected_bytes = expected_bytes
         self.signals = WorkerSignals()
         self.received_data = []
-        
+
     def run(self):
         while True:
             received_data = b''
@@ -30,8 +30,8 @@ class DataReceiver(QRunnable):
                 bytes_received += len(data)
             if bytes_received >= self.expected_bytes:
                 received_data_array = np.frombuffer(received_data, dtype=np.uint16)
-                # Convert to voltage using ADC resolution and maximum reference voltage
                 voltage_data = received_data_array * (5.0 / 1023)
+                print("Emitted")
                 self.signals.plot_data.emit(voltage_data)
                 self.received_data.extend(voltage_data)
 
@@ -39,11 +39,11 @@ class DataReceiver(QRunnable):
 class Oscilloscope(QMainWindow):
     def __init__(self):
         super().__init__()
-        server_host = '192.168.122.245'
+        server_host = '169.254.37.152'
         server_port = 8081
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((server_host, server_port))
-
+        self.expected_bytes = 2000 
         self.setWindowTitle("Oscilloscope")
         self.setGeometry(0, 0, 1920, 1080)
         self.central_widget = QWidget(self)
@@ -103,10 +103,10 @@ class Oscilloscope(QMainWindow):
         # Add spacing
         button_layout.addSpacing(10)  
 
-        # QDial for trigger control
+        # QDial for scaling control
         self.scale_dial = QDial()
-        self.scale_dial.setMinimum(0)
-        self.scale_dial.setMaximum(20)
+        self.scale_dial.setMinimum(1)
+        self.scale_dial.setMaximum(10)
         self.scale_dial.setSingleStep(1)
         self.scale_dial.setValue(0)
         self.scale_dial.setNotchesVisible(True)
@@ -146,6 +146,7 @@ class Oscilloscope(QMainWindow):
         self.plot_widget.setTitle("Oscilloscope")
         self.series_channel1 = self.plot_widget.plot(pen='r', name="Channel 1")
         self.plot_widget.showGrid(x=True, y=True)
+        self.plot_widget.setYRange(-5, 5)
         main_layout.addWidget(self.plot_widget)
 
         self.zero_crossing_index = -1
@@ -181,15 +182,13 @@ class Oscilloscope(QMainWindow):
             image.save(file_path)
 
     def plot_data(self):
-        if self.plotting:
-            expected_bytes = 2000  # Set the expected number of bytes to receive each second
-            worker = DataReceiver(self.client_socket, expected_bytes)
-            worker.signals.plot_data.connect(self.update_plot)
-            QThreadPool.globalInstance().start(worker)
+        worker = DataReceiver(self.client_socket, self.expected_bytes)
+        worker.signals.plot_data.connect(self.update_plot)
+        QThreadPool.globalInstance().start(worker)
 
     def update_plot(self, received_data_array):
-        # if self.zero_crossing_index == -1:
-        #     self.find_and_set_first_zero_crossing(received_data_array)
+        if self.zero_crossing_index == -1:
+            self.find_and_set_first_zero_crossing(received_data_array)
         self.plot_with_triggering(received_data_array)
 
     def find_and_set_first_zero_crossing(self, data):
@@ -197,18 +196,18 @@ class Oscilloscope(QMainWindow):
             x = data[i] - self.trigger_value
             y = data[i+1] - self.trigger_value
             if x * y <= 0 and x < y:
-                self.zero_crossing=data[i+1]
+                self.zero_crossing_index=data[i+1]
                 break
  
     def plot_with_triggering(self, received_data_array):
-        # for i in range(len(received_data_array) - 1):
-            # if received_data_array[i] == self.zero_crossing_index:
-            # shifted_received_data = received_data_array[i:]
-            resampled_data = signal.resample_poly(received_data_array, 1, self.scale_value)
-            num_points = len(resampled_data)
-            x_data = np.linspace(0, (2*num_points/2000)/self.scale_value, num_points)
-            self.series_channel1.setData(x_data, resampled_data)
-                # break
+        for i in range(len(received_data_array) - 1):
+            if received_data_array[i] == self.zero_crossing_index:
+                shifted_received_data = received_data_array[i:]
+                resampled_data = shifted_received_data[::self.scale_value]#signal.resample_poly(shifted_received_data, 1, self.scale_value)
+                num_points = len(resampled_data)
+                x_data = np.linspace(0, (2*num_points*self.scale_value/self.expected_bytes), num_points)
+                self.series_channel1.setData(x_data, resampled_data)
+                break
     
     def update_trigger_value(self, value):
         self.trigger_value = value / 10

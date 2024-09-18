@@ -10,6 +10,7 @@ class WorkerSignals(QObject):
     plot_data = pyqtSignal(np.ndarray)
 
 class DataReceiver(QRunnable):
+    print("DataReceiver")
     def __init__(self, client_socket, expected_bytes):
         super().__init__()
         self.client_socket = client_socket
@@ -29,14 +30,15 @@ class DataReceiver(QRunnable):
                 bytes_received += len(data)
             if bytes_received >= self.expected_bytes:
                 received_data_array = np.frombuffer(received_data, dtype=np.uint16)
-                received_data_array = received_data_array.astype(np.float16) * 5 / 4096
-                self.signals.plot_data.emit(received_data_array)
-                self.received_data.extend(received_data_array)
+                voltage_data = received_data_array * (5.0 / 1023)
+                print(f"Received {len(voltage_data)} data points.") 
+                self.signals.plot_data.emit(voltage_data)
+                self.received_data.extend(voltage_data)
 
 class Oscilloscope(QMainWindow):
     def __init__(self):
         super().__init__()
-        server_host = '169.254.116.191'
+        server_host = '169.254.37.152'
         server_port = 8081
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((server_host, server_port))
@@ -53,7 +55,7 @@ class Oscilloscope(QMainWindow):
         self.plot_widget.setMouseEnabled(y=False)  
         self.plot_widget.setYRange(-5, 5)
         main_layout.addWidget(self.plot_widget)
-        worker = DataReceiver(self.client_socket, 4000)
+        worker = DataReceiver(self.client_socket, 1000)
         worker.signals.plot_data.connect(self.update_plot)
         QThreadPool.globalInstance().start(worker)
 
@@ -65,6 +67,7 @@ class Oscilloscope(QMainWindow):
         event.accept()
 
 if __name__ == "__main__":
+    print("Starting Oscilloscope")
     app = QApplication(sys.argv)
     oscilloscope = Oscilloscope()
     oscilloscope.show()
