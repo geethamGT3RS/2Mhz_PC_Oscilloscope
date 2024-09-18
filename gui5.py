@@ -42,6 +42,9 @@ class LabeledDial(QtWidgets.QWidget):
     _outPadding = 2
     valueChanged = QtCore.pyqtSignal(int)
 
+
+
+
     def __init__(self, *args, **kwargs):
         dialArgs = {k:v for k, v in kwargs.items() if k in self._dialProperties}
         for k in dialArgs.keys():
