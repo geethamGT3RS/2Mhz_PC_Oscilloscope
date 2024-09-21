@@ -1,32 +1,31 @@
-#include <Arduino.h>
-#include <WiFi.h>
+#include <driver/adc.h>
+#include <driver/uart.h>
+#include <soc/adc_channel.h>
 
-
-#define ADC_PIN     36  // GPIO 36 (ADC1_CH0) or any other available ADC pin on ESP32-S3
-#define SAMPLE_RATE 2000000  // Max sample rate is about 2Msps for ESP32 ADC
-#define BUFFER_SIZE 1024  // Define buffer size for collecting ADC samples
-
-uint16_t adc_buffer[BUFFER_SIZE];  // Buffer to store ADC readings
+#define SAMPLE_RATE 1000000  // Target sample rate: 1MSPS
+#define ADC_CHANNEL ADC1_CHANNEL_0  // GPIO1 (ADC1 Channel 0)
+#define BUFFER_SIZE 1024  // Size of the buffer to store ADC samples
 
 void setup() {
-  // Initialize Serial communication at 2M baud rate
-  Serial.begin(1000000);
+  Serial.begin(1000000);  // Set baud rate for faster data transfer
+  pinMode(1, INPUT);  // Set GPIO1 as input
 
-  // Initialize ADC
-  analogReadResolution(12);  // 12-bit ADC resolution
-  analogSetAttenuation(ADC_11db);  // Set attenuation for full voltage range
-
-  // Disable Wi-Fi and Bluetooth to maximize ADC performance
-  WiFi.mode(WIFI_OFF);
-  btStop();  // Turn off Bluetooth
+  // Configure ADC width and attenuation
+  adc1_config_width(ADC_WIDTH_BIT_12);  // 12-bit resolution (0-4095)
+  adc1_config_channel_atten(ADC_CHANNEL, ADC_ATTEN_DB_11);  // 11 dB attenuation
 }
 
 void loop() {
-  // Collect ADC samples into the buffer
+  uint16_t adc_buffer[BUFFER_SIZE];  // Buffer to store ADC samples
+
+  // Read ADC data in a loop as fast as possible
   for (int i = 0; i < BUFFER_SIZE; i++) {
-    adc_buffer[i] = analogRead(ADC_PIN);
+    adc_buffer[i] = adc1_get_raw(ADC_CHANNEL);  // Read raw ADC data from GPIO1
   }
 
-  // Send the ADC data over Serial (as binary data)
-  Serial.write((uint8_t*)adc_buffer, BUFFER_SIZE * sizeof(uint16_t));
+  // Send raw ADC data over Serial (USB) for each sample
+  Serial.write((uint8_t*)adc_buffer, sizeof(adc_buffer));
+
+  // You can use delayMicroseconds() here if you need to fine-tune the sample rate
+  // For example, delayMicroseconds(1) will adjust sampling to match approx 1MSPS
 }

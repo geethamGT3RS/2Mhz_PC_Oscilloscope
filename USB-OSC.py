@@ -34,16 +34,16 @@ class USBOscilloscope(QMainWindow):
 
         # Horizontal scale dial
         self.horizontal_scale_dial = QDial()
-        self.horizontal_scale_dial.setRange(1, 100)  # Scale from 1x to 100x
-        self.horizontal_scale_dial.setValue(10)  # Default scale
+        self.horizontal_scale_dial.setRange(1, 100)
+        self.horizontal_scale_dial.setValue(10)
         self.horizontal_scale_dial.setNotchesVisible(True)
         left_panel.addWidget(QLabel("Horizontal Scale:"))
         left_panel.addWidget(self.horizontal_scale_dial)
 
         # Vertical scale dial
         self.vertical_scale_dial = QDial()
-        self.vertical_scale_dial.setRange(1, 20)  # Scale from 1 to 20
-        self.vertical_scale_dial.setValue(10)  # Default scale
+        self.vertical_scale_dial.setRange(1, 20)
+        self.vertical_scale_dial.setValue(10)
         self.vertical_scale_dial.setNotchesVisible(True)
         left_panel.addWidget(QLabel("Vertical Scale:"))
         left_panel.addWidget(self.vertical_scale_dial)
@@ -93,7 +93,7 @@ class USBOscilloscope(QMainWindow):
         selected_port = self.port_combo.currentText()
         if selected_port:
             try:
-                self.serial_port = serial.Serial(selected_port, baudrate=1000000, timeout=0.1)
+                self.serial_port = serial.Serial(selected_port, baudrate=2000000, timeout=0.1)
                 self.status_label.setText(f"Status: Connected to {selected_port}")
                 self.data_buffer = np.zeros(10000)  # Reset the data buffer
                 self.plot_timer.start(5)  # Update the plot every 5 ms
@@ -107,7 +107,7 @@ class USBOscilloscope(QMainWindow):
                 # Read 2000 bytes from the serial port (1000 samples for uint16 data)
                 data = self.serial_port.read(2000)
                 data_array = np.frombuffer(data, dtype=np.uint16)
-                data_array = data_array.astype(np.float32) * 3.3 / 4096  # Scale to voltage
+                data_array = data_array.astype(np.float32) * 3.3 / 65535  # Scale to voltage for 16-bit ADC
 
                 # Update the rolling data buffer
                 self.data_buffer = np.roll(self.data_buffer, -len(data_array))
